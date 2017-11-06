@@ -73,7 +73,7 @@ namespace SocketServer
                 //收到一个TcpClient时，都有一个命名的Thread对应，
                 NetworkStream ns = clientMem[Thread.CurrentThread.Name].GetStream();
                 StreamReader sr = new StreamReader(ns);
-                string message = sr.ReadLine();//读取消息
+                string message = sr.ReadLine();//读取消息    
                 this.ReceiveEvent(message);//接收过数据 就触发接收消息的事件            
             }
         }

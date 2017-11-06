@@ -12,7 +12,7 @@ namespace SocketClient
 {
     public partial class ClientForm : Form
     {
-        private ChatClient clientObj = new ChatClient(); //客户对象,对于一个对象一定要new啊
+        private AsyncChatClient clientObj = new AsyncChatClient(); //客户对象,对于一个对象一定要new啊
         public ClientForm()
         {
             InitializeComponent();
@@ -40,8 +40,8 @@ namespace SocketClient
             try
             {
                 clientObj.SendConnection(ip, Convert.ToInt32(port)); //连接  
-                clientObj.receiveEvent += new ChatClient.receiveDelegate(ClientObj_receiveEvent); //订阅事件的处理方法
-                clientObj.Send(tbName.Text + "登陆成功!");
+                clientObj.receiveEvent += new AsyncChatClient.receiveDelegate(ClientObj_receiveEvent); //订阅事件的处理方法
+                clientObj.Send(tbName.Text + "登陆成功!\r\n");
                 btnSend.Enabled = true;
                 btnConnect.Enabled = false;
             }
@@ -58,7 +58,7 @@ namespace SocketClient
             {
                 if (this.InvokeRequired) //指示是否需要在这个线程上调用方法
                 {
-                    ChatClient.receiveDelegate update = new ChatClient.receiveDelegate(ClientObj_receiveEvent);//当把消息传递给控件线程时重复调用该方法就会调用else
+                    AsyncChatClient.receiveDelegate update = new AsyncChatClient.receiveDelegate(ClientObj_receiveEvent);//当把消息传递给控件线程时重复调用该方法就会调用else
                     this.Invoke(update, new object[] { receiveData });//将消息发送给控件线程处理
                 }
                 else

@@ -51,9 +51,6 @@ namespace SocketServer
                 else
                 {
                     this.lbMessage.Items.Add(message);//添加到显示栏
-
-
-
                     serverObj.Send(message);
                 }
             }
