@@ -53,6 +53,10 @@
     <Compile Include="ClientForm.Designer.cs">
       <DependentUpon>ClientForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="org.kevinxing.socket\ISocket.cs" />
+    <Compile Include="org.kevinxing.socket\SocketAsyncState.cs" />
+    <Compile Include="org.kevinxing.socket\SocketEventArgs.cs" />
+    <Compile Include="org.kevinxing.socket\TcpClient.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
