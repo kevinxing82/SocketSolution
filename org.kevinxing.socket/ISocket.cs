@@ -10,14 +10,18 @@ namespace org.kevinxing.socket
     {
         bool IsConnected { get; }
 
-        void Send(byte[] data);
+        void Receive();
 
-        void SendAsync(byte[] data);
+        void Send(byte[] data);
 
         void Disconnect();
 
         void DisconnectAsync();
 
-        //event EventHandler<>
+        event EventHandler<SocketEventArgs> DisconnectCompleted;
+
+        event EventHandler<SocketEventArgs> ReceiveCompleted;
+
+        event EventHandler<SocketEventArgs> SendCompleted;
     }
 }

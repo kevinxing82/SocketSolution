@@ -6,12 +6,10 @@ using System.Threading.Tasks;
 
 namespace org.kevinxing.socket
 {
-    public class SocketAsyncState
+    public interface ISocketPacker
     {
-        public bool Completed { get; set; }
+        byte[] Pack();
 
-        public byte[] Data { get; set; }
-
-        public bool IsAsync { get; set; }
+        void UnPack(byte[] bytes);
     }
 }
