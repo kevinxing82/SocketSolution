@@ -13,7 +13,7 @@ namespace org.kevinxing.socket
     {
         public event EventHandler<SocketEventArgs> ConnectCompleted;
 
-        public TcpClient()
+        public TcpClient():base()
         {
             socketObj = new Socket(AddressFamily.InterNetwork, SocketType.Stream,
                 ProtocolType.Tcp);
