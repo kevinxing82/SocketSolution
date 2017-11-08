@@ -40,12 +40,28 @@ namespace org.kevinxing.socket
             lock (this)
             {
                 socketObj.Disconnect(true);
+                DisconnectCompleted(this, new SocketEventArgs(this, SocketAsyncOperation.Disconnect));
+                socketObj.Close();
             }
         }
 
         public void DisconnectAsync()
         {
-            throw new NotImplementedException();
+            if (!IsConnected)
+            {
+                throw new InvalidOperationException("未连接至服务器");
+            }
+            lock (this)
+            {
+                socketObj.BeginDisconnect(true, DisconnectCallback, new object());
+            }
+        }
+
+        private void DisconnectCallback(IAsyncResult ar)
+        {
+            socketObj.EndDisconnect(ar);
+            socketObj.Close();
+            DisconnectCompleted(this, new SocketEventArgs(this, SocketAsyncOperation.Disconnect));
         }
 
         public void Receive()
@@ -128,15 +144,7 @@ namespace org.kevinxing.socket
 
         public void Dispose()
         {
-            lock (this)
-            {
-                if (IsConnected)
-                {
-                    socketObj.Disconnect(false);
-                }
-                socketObj.Close();
-                DisconnectCompleted(this, new SocketEventArgs(this, SocketAsyncOperation.Disconnect));
-            }
+            
         }
     }
 }

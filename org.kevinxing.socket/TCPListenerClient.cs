@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace org.kevinxing.socket
 {
-    class TCPListenerClient:SocketBase
+    public class TCPListenerClient:SocketBase
     {
     }
 }
