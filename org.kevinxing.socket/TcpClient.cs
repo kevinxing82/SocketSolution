@@ -5,47 +5,41 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Net;
-using System.IO;
 
 namespace org.kevinxing.socket
 {
-    public class TcpClient : SocketBase
+    public class TCPClient:SocketBase
     {
-        public event EventHandler<SocketEventArgs> ConnectCompleted;
-
-        public TcpClient():base()
+        public event EventHandler ConnectCompleted;
+        public TCPClient():base()
         {
             socketObj = new Socket(AddressFamily.InterNetwork, SocketType.Stream,
-                ProtocolType.Tcp);
+              ProtocolType.Tcp);
         }
 
         public void Connect(IPEndPoint endPoint)
         {
-             if(IsConnected)
+            if (IsConnected)
             {
                 throw new InvalidOperationException("已连接至服务器");
             }
-             if(endPoint == null)
+            if (endPoint == null)
             {
                 throw new ArgumentNullException("endPoint");
             }
-             lock(this)
+            try
             {
-                try
+                socketObj.Connect(endPoint);
+                if (ConnectCompleted != null)
                 {
-                    socketObj.Connect(endPoint);
-                    if(ConnectCompleted!=null)
-                    {
-                        ConnectCompleted(this,new SocketEventArgs(this, 
-                            SocketAsyncOperation.Connect));
-                    }
-                    Receive();
+                    ConnectCompleted(this,null);
                 }
-                catch(Exception e)
-                {
-                    Console.WriteLine(e.ToString());
-                }
-             }
+                Receive();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.ToString());
+            }
         }
     }
 }

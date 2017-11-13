@@ -3,25 +3,27 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Net.Sockets;
 
 namespace org.kevinxing.socket
 {
     public interface ISocket
     {
-        bool IsConnected { get; }
+            string SessionID { get; }
+            bool IsConnected { get; }
 
-        void Receive();
+            void Receive();
 
-        void Send(byte[] data);
+            void Send(byte[] data);
 
-        void Disconnect();
+            void Disconnect();
 
-        void DisconnectAsync();
+            void DisconnectAsync();
 
-        event EventHandler<SocketEventArgs> DisconnectCompleted;
+            event EventHandler OnDisconnectCompleted;
 
-        event EventHandler<SocketEventArgs> ReceiveCompleted;
+            event EventHandler<byte[]> OnReceiveCompleted;
 
-        event EventHandler<SocketEventArgs> SendCompleted;
+            event EventHandler OnSendCompleted;
     }
 }

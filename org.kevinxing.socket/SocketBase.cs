@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.Sockets;
 using System.Linq;
+using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -9,18 +9,28 @@ namespace org.kevinxing.socket
 {
     public class SocketBase : ISocket, IDisposable
     {
-        protected Socket socketObj;
-        protected List<byte> receiveCache;
-        protected Queue<SocketAsyncState> sendCache;
+        private const int ReceiveBufferSize= 1024;
+        private string sessionID;
+        public Socket socketObj;
+        protected byte[] receiveCache;
+        protected Queue<byte[]> sendCache;
+        protected SocketAsyncEventArgs receiveEventArg;
+        protected SocketAsyncEventArgs sendEventArg;
 
-        public event EventHandler<SocketEventArgs> DisconnectCompleted;
-        public event EventHandler<SocketEventArgs> ReceiveCompleted;
-        public event EventHandler<SocketEventArgs> SendCompleted;
+        public event EventHandler OnDisconnectCompleted;
+        public event EventHandler<byte[]> OnReceiveCompleted;
+        public event EventHandler OnSendCompleted;
 
         public SocketBase()
         {
-            receiveCache = new List<byte>();
-            sendCache = new Queue<SocketAsyncState>();
+            sessionID = Guid.NewGuid().ToString();
+            receiveCache = new byte[ReceiveBufferSize];
+            sendCache = new Queue<byte[]>();
+            receiveEventArg = new SocketAsyncEventArgs();
+            receiveEventArg.Completed += new EventHandler<SocketAsyncEventArgs>(OnIOCompleted);
+            receiveEventArg.SetBuffer(receiveCache, 0, ReceiveBufferSize);
+            sendEventArg = new SocketAsyncEventArgs();
+            sendEventArg.Completed += new EventHandler<SocketAsyncEventArgs>(OnIOCompleted);
         }
 
         public bool IsConnected
@@ -31,17 +41,48 @@ namespace org.kevinxing.socket
             }
         }
 
+        public string SessionID
+        {
+            get
+            {
+                return sessionID;
+            }
+        }
+
+
+        private void OnIOCompleted(object sender, SocketAsyncEventArgs e)
+        {
+            switch(e.LastOperation)
+            {
+                case SocketAsyncOperation.Receive:
+                    ProcessReceive(e);
+                    break;
+                case SocketAsyncOperation.Send:
+                    ProcessSend(e);
+                    break;
+                case SocketAsyncOperation.Disconnect:
+                    ProcessDisconnect(e);
+                    break;
+                default:
+                    throw new ArgumentException("The last operation completed on the socket was invalid");
+            }
+        }
+        #region Disconnect
         public void Disconnect()
         {
             if (!IsConnected)
             {
                 throw new InvalidOperationException("未连接至服务器");
             }
-            lock (this)
+            try
             {
                 socketObj.Disconnect(true);
-                DisconnectCompleted(this, new SocketEventArgs(this, SocketAsyncOperation.Disconnect));
-                socketObj.Close();
+                receiveEventArg.DisconnectReuseSocket = true;
+                ProcessDisconnect(receiveEventArg);
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine(e.ToString());
             }
         }
 
@@ -51,96 +92,116 @@ namespace org.kevinxing.socket
             {
                 throw new InvalidOperationException("未连接至服务器");
             }
-            lock (this)
+            StartDisconnect(receiveEventArg);
+        }
+
+        private void StartDisconnect(SocketAsyncEventArgs e)
+        {
+            bool willRaiseEvent = socketObj.DisconnectAsync(e);
+            if(!willRaiseEvent)
             {
-                socketObj.BeginDisconnect(true, DisconnectCallback, new object());
+                ProcessDisconnect(e);
             }
         }
 
-        private void DisconnectCallback(IAsyncResult ar)
+        private void ProcessDisconnect(SocketAsyncEventArgs e)
         {
-            socketObj.EndDisconnect(ar);
-            socketObj.Close();
-            DisconnectCompleted(this, new SocketEventArgs(this, SocketAsyncOperation.Disconnect));
+            OnDisconnectCompleted(this, e);
         }
+        #endregion
 
+        #region Receive
         public void Receive()
         {
-            SocketAsyncState state = new SocketAsyncState();
-            socketObj.BeginReceive(state.SendBuffer, 0, state.SendBuffer.Length, 0,
-                ReceiveCallback, state);
+            Console.WriteLine("Receive call");
+            StartReceive(receiveEventArg);   
         }
 
-        private void ReceiveCallback(IAsyncResult ar)
-        {
-            SocketAsyncState state = (SocketAsyncState)ar.AsyncState;
-            int read = socketObj.EndReceive(ar);
-            if (read > 0)
-            {
-                //cach data
-                receiveCache.AddRange(state.ReceiveBuffer.Take(read).ToArray());
-            }
-            else
-            {
-                if (ReceiveCompleted != null)
-                {
-                    ReceiveCompleted(this, new SocketEventArgs(this, SocketAsyncOperation.Receive) { Data = receiveCache.ToArray() });
-                    receiveCache.Clear();
-                }
-            }
-            socketObj.BeginReceive(state.ReceiveBuffer, 0, state.ReceiveBuffer.Length, 0,
-                    ReceiveCallback, state);
-        }
-
-        public void Send(byte[] data)
-        {
-            if (!IsConnected)
-            {
-                throw new SocketException(10057);
-            }
-            if (data == null)
-            {
-                throw new ArgumentNullException("data");
-            }
-            if (data.Length == 0)
-            {
-                throw new ArgumentException("data的长度不能为0");
-            }
-
-            SocketAsyncState state = new SocketAsyncState();
-            state.SendBuffer = data;
-            if (sendCache.Count > 0)
-            {
-                sendCache.Enqueue(state);
-                SendInternal(sendCache.Dequeue());
-            }
-            else
-            {
-                SendInternal(state);
-            }
-        }
-
-        private void SendInternal(SocketAsyncState state)
+        private void StartReceive(SocketAsyncEventArgs e)
         {
             try
             {
-                socketObj.BeginSend(state.SendBuffer, 0, state.SendBuffer.Length, 0, SendCallback, state);
+                if (!socketObj.ReceiveAsync(e))
+                {
+                    ProcessReceive(e);
+                }
             }
-            catch (Exception e)
+            catch(Exception ex)
             {
-                Console.WriteLine(e.ToString());
+                Console.WriteLine(ex.ToString());
             }
         }
 
-        private void SendCallback(IAsyncResult ar)
+        private void ProcessReceive(SocketAsyncEventArgs e)
         {
-            SocketAsyncState state = (SocketAsyncState)ar.AsyncState;
-            int bytesSent = socketObj.EndSend(ar);
-            SendCompleted(this, new SocketEventArgs(this, SocketAsyncOperation.Send)
+            if(e.BytesTransferred>0&&e.SocketError==SocketError.Success)
             {
-                Data = state.SendBuffer
-            });
+                ArraySegment<byte> buffer = new ArraySegment<byte>(e.Buffer, 0, e.BytesTransferred);
+                OnReceiveCompleted(this, buffer.ToArray());
+            }
+            else
+            {
+                Console.WriteLine(e.SocketError.ToString());
+            }
+            Console.WriteLine("ProcessReceive");
+            StartReceive(e);
         }
+        #endregion
+
+        #region Send
+        public void Send(byte[] data)
+        {
+            if (sendCache.Count > 1)
+            {
+                sendCache.Enqueue(data);
+                StartSend();
+            }
+            else
+            {
+                StartSend(data);
+            }
+        }
+
+        private void StartSend()
+        {
+            byte[] buffer = sendCache.Dequeue();
+            sendEventArg.SetBuffer(buffer, 0, buffer.Length);
+            try
+            {
+                bool willRaiseEvent = socketObj.SendAsync(sendEventArg);
+                if(!willRaiseEvent)
+                {
+                    ProcessSend(sendEventArg);
+                }
+            }
+            catch(Exception e)
+            {
+                Console.Write(e.ToString());
+            }
+        }
+
+        private void StartSend(byte[] data)
+        {
+            sendEventArg.SetBuffer(data, 0, data.Length);
+            try
+            {
+                bool willRaiseEvent = socketObj.SendAsync(sendEventArg);
+                if (!willRaiseEvent)
+                {
+                    ProcessSend(sendEventArg);
+                }
+            }
+            catch (Exception e)
+            {
+                Console.Write(e.ToString());
+            }
+        }
+
+        private void ProcessSend(SocketAsyncEventArgs e)
+        {
+            OnSendCompleted(this,e);
+        }
+        #endregion
 
         public void Dispose()
         {

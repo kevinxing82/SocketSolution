@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SocketClient", "SocketClient.csproj", "{C2B77142-5019-406C-8DF5-5D73D4B02956}"
+	ProjectSection(ProjectDependencies) = postProject
+		{9DFB8E5C-06A8-4592-A82E-ABB7E78D13B4} = {9DFB8E5C-06A8-4592-A82E-ABB7E78D13B4}
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "org.kevinxing.socket", "..\org.kevinxing.socket\org.kevinxing.socket.csproj", "{9DFB8E5C-06A8-4592-A82E-ABB7E78D13B4}"
 EndProject
